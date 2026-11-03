@@ -24,6 +24,14 @@ h2{font-size:16px;margin:0 0 10px}.sub{color:var(--mut);font-size:13px}
 .qimg{background:#fff;border:1px solid var(--line);border-radius:10px;overflow:hidden}.qimg img{display:block;width:100%;height:auto;filter:var(--imgfilter)}
 .opts{display:flex;gap:8px;margin:12px 0}.opts button{flex:1;padding:12px 0;font-size:18px;font-weight:700}
 .opts button.right{background:var(--ok);color:#fff;border-color:var(--ok)}.opts button.wrong{background:var(--bad);color:#fff;border-color:var(--bad)}.opts button.key{outline:3px solid var(--ok)}
+.qwrap{max-width:960px;margin:0 auto;display:grid;grid-template-columns:minmax(0,1fr) 230px;gap:18px;align-items:start}
+.side{position:sticky;top:14px;display:flex;flex-direction:column;gap:10px}
+.side .opts{flex-direction:column;margin:0}.side .opts button{display:flex;align-items:center;gap:10px;padding:10px 14px;font-size:17px;text-align:left}
+.side .opts button small{margin-left:auto;font-weight:400;color:var(--mut);font-size:11px}
+.side .opts button.right small,.side .opts button.wrong small{color:#fff}
+.side .card{margin:0}.prog{font-size:13px;color:var(--mut)}.prog b{color:var(--fg);font-size:20px}
+@media(max-width:760px){.qwrap{grid-template-columns:1fr}.side{position:sticky;bottom:0;top:auto;order:2;background:var(--bg);padding:8px 0;border-top:1px solid var(--line)}
+.side .opts{flex-direction:row}.side .opts button{justify-content:center;padding:10px 0}.side .opts button small{display:none}}
 .bar{height:6px;background:var(--line);border-radius:9px;overflow:hidden;margin:6px 0 12px}.bar i{display:block;height:100%;background:var(--acc)}
 .meta{display:flex;gap:8px;flex-wrap:wrap;align-items:center;color:var(--mut);font-size:13px;margin-bottom:8px}
 .tag{padding:1px 8px;border-radius:99px;background:var(--sel);color:var(--fg);font-size:12px}
@@ -98,11 +106,11 @@ function begin(list,title){sess={list,i:0,title,res:[],picked:null};go('quiz');r
 function quizView(){
   const s=sess;if(s.i>=s.list.length)return result();
   const q=s.list[s.i];
-  $('#app').innerHTML=`<div class="meta"><b>${s.title}</b><span>${s.i+1} / ${s.list.length}</span><span class="tag">원래 제${q.r}회 ${q.n}번</span><span class="tag">${era(q)}</span></div>
-  <div class="bar"><i style="width:${s.i/s.list.length*100}%"></i></div>
-  <div class="qimg"><img src="q/${q.id}.jpg" alt="문항"></div>
-  <div class="opts">${[1,2,3,4,5].map(k=>`<button id="o${k}" onclick="pick(${k})">${k}</button>`).join('')}</div>
-  <div id="fb"></div>`;
+  $('#app').innerHTML=`<div class="qwrap"><div><div class="meta"><b>${s.title}</b><span class="tag">원래 제${q.r}회 ${q.n}번</span><span class="tag">${era(q)}</span></div>
+  <div class="qimg"><img src="q/${q.id}.jpg" alt="문항"></div></div>
+  <aside class="side"><div class="prog"><b>${s.i+1}</b> / ${s.list.length}</div><div class="bar" style="margin:0"><i style="width:${s.i/s.list.length*100}%"></i></div>
+  <div class="opts">${[1,2,3,4,5].map(k=>`<button id="o${k}" onclick="pick(${k})">${k}<small>키 ${k}</small></button>`).join('')}</div>
+  <div id="fb"></div></aside></div>`;
   window.scrollTo(0,0);
 }
 addEventListener('keydown',e=>{if(!sess||location.hash!=='#quiz'||sess.i>=sess.list.length)return;
