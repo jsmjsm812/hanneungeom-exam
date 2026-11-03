@@ -66,7 +66,7 @@ function home(){
    <div class="stat"><b>${total?Math.round((total-w)/total*100):0}%</b>정답률 (${total-w}/${total})</div>
    <div class="stat"><b>${wrongOpen}</b>복습할 오답</div></div></div>
   <div class="card"><h2>섞어서 풀기</h2>
-   <div class="sub">기본 50문항이고, 한능검처럼 시대 순서(선사 → 현대)로 나와요. 시대·회차를 고르지 않으면 전체에서 뽑아요. 정답표가 있는 문항만 나와요.</div>
+   <div class="sub">기본 50문항이고, 한능검처럼 1번부터 순서대로 나와요(1번 자리엔 아무 회차의 1번 문제, 2번 자리엔 2번 문제…). 시대·회차를 고르지 않으면 전체에서 뽑아요. 정답표가 있는 문항만 나와요.</div>
    <div class="row"><b>시대</b><div class="chips">${ERAS.map(e=>`<span class="chip ${cfg.eras.has(e)?'on':''}" onclick="tg('eras','${e}')">${e} <small>${eraCnt[e]||0}</small></span>`).join('')}</div></div>
    <div class="row"><b>회차</b><div class="chips">${rs.map(r=>`<span class="chip ${cfg.rounds.has(r)?'on':''}" onclick="tg('rounds',${r})">${r}</span>`).join('')}</div></div>
    <div class="row"><b>문항 수</b><select onchange="cfg.n=+this.value">${[10,20,30,50].map(n=>`<option ${cfg.n==n?'selected':''}>${n}</option>`).join('')}</select>
@@ -82,19 +82,23 @@ function exp(){const a=document.createElement('a');a.href=URL.createObjectURL(ne
 function imp(el){const f=el.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{try{rec=Object.assign(rec,JSON.parse(r.result));save();home();alert('가져왔어요')}catch(e){alert('파일을 읽지 못했어요')}};r.readAsText(f)}
 let sess=null;
 function shuffle(a){a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
-function ordered(list){return shuffle(list).sort((a,b)=>ERAS.indexOf(era(a))-ERAS.indexOf(era(b)))}
+function ordered(list){return shuffle(list).sort((a,b)=>a.n-b.n)}
 function startQuiz(){
   let pool=Q.filter(q=>q.a&&(!cfg.eras.size||cfg.eras.has(era(q)))&&(!cfg.rounds.size||cfg.rounds.has(q.r)));
   if(cfg.mode==='new')pool=pool.filter(q=>!rec[q.id]||!rec[q.id].t);
   if(cfg.mode==='wrong')pool=pool.filter(q=>rec[q.id]&&rec[q.id].w>0);
   if(!pool.length){alert('조건에 맞는 문항이 없어요');return}
-  begin(ordered(shuffle(pool).slice(0,cfg.n)),'섞어 풀기 · 시대 순')}
+  // 한능검처럼 문항 번호 자리마다 한 문제씩: 1번 자리엔 어느 회차의 1번, 2번 자리엔 2번 ...
+  const g={};shuffle(pool).forEach(q=>(g[q.n]=g[q.n]||[]).push(q));
+  const nums=shuffle(Object.keys(g).map(Number));const pick=[];
+  while(pick.length<cfg.n&&nums.some(n=>g[n].length)){for(const n of nums){if(pick.length>=cfg.n)break;if(g[n].length)pick.push(g[n].pop())}}
+  begin(pick.sort((a,b)=>a.n-b.n),'섞어 풀기 · 문항 번호 순')}
 function startRound(r){begin(Q.filter(q=>q.r===r&&q.a),'제'+r+'회')}
 function begin(list,title){sess={list,i:0,title,res:[],picked:null};go('quiz');route()}
 function quizView(){
   const s=sess;if(s.i>=s.list.length)return result();
   const q=s.list[s.i];
-  $('#app').innerHTML=`<div class="meta"><b>${s.title}</b><span>${s.i+1} / ${s.list.length}</span><span class="tag">제${q.r}회 ${q.n}번</span><span class="tag">${era(q)}</span></div>
+  $('#app').innerHTML=`<div class="meta"><b>${s.title}</b><span>${s.i+1} / ${s.list.length}</span><span class="tag">원래 제${q.r}회 ${q.n}번</span><span class="tag">${era(q)}</span></div>
   <div class="bar"><i style="width:${s.i/s.list.length*100}%"></i></div>
   <div class="qimg"><img src="q/${q.id}.jpg" alt="문항"></div>
   <div class="opts">${[1,2,3,4,5].map(k=>`<button id="o${k}" onclick="pick(${k})">${k}</button>`).join('')}</div>
