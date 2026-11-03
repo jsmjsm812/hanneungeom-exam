@@ -54,7 +54,7 @@ function route(){const h=location.hash.slice(1);$('#thm').textContent=themeLabel
   if(h==='wrong')return wrongView();
   if(h==='quiz'&&sess)return quizView();
   return home()}
-let cfg={eras:new Set(),rounds:new Set(),n:20,mode:'all'};
+let cfg={eras:new Set(),rounds:new Set(),n:50,mode:'all'};
 function home(){
   const total=Object.values(rec).reduce((a,x)=>a+x.t,0),w=Object.values(rec).reduce((a,x)=>a+x.w,0);
   const solved=Object.values(rec).filter(x=>x.t>0).length, wrongOpen=Object.values(rec).filter(x=>x.w>0&&!x.done).length;
@@ -66,10 +66,10 @@ function home(){
    <div class="stat"><b>${total?Math.round((total-w)/total*100):0}%</b>정답률 (${total-w}/${total})</div>
    <div class="stat"><b>${wrongOpen}</b>복습할 오답</div></div></div>
   <div class="card"><h2>섞어서 풀기</h2>
-   <div class="sub">시대·회차를 고르지 않으면 전체에서 뽑아요. 정답표가 있는 문항만 나와요.</div>
+   <div class="sub">기본 50문항이고, 한능검처럼 시대 순서(선사 → 현대)로 나와요. 시대·회차를 고르지 않으면 전체에서 뽑아요. 정답표가 있는 문항만 나와요.</div>
    <div class="row"><b>시대</b><div class="chips">${ERAS.map(e=>`<span class="chip ${cfg.eras.has(e)?'on':''}" onclick="tg('eras','${e}')">${e} <small>${eraCnt[e]||0}</small></span>`).join('')}</div></div>
    <div class="row"><b>회차</b><div class="chips">${rs.map(r=>`<span class="chip ${cfg.rounds.has(r)?'on':''}" onclick="tg('rounds',${r})">${r}</span>`).join('')}</div></div>
-   <div class="row"><b>문항 수</b><select onchange="cfg.n=+this.value">${[10,20,30,50,100].map(n=>`<option ${cfg.n==n?'selected':''}>${n}</option>`).join('')}</select>
+   <div class="row"><b>문항 수</b><select onchange="cfg.n=+this.value">${[10,20,30,50].map(n=>`<option ${cfg.n==n?'selected':''}>${n}</option>`).join('')}</select>
     <b>대상</b><select onchange="cfg.mode=this.value"><option value="all" ${cfg.mode=='all'?'selected':''}>전체</option><option value="new" ${cfg.mode=='new'?'selected':''}>안 푼 문제만</option><option value="wrong" ${cfg.mode=='wrong'?'selected':''}>틀린 적 있는 문제만</option></select>
     <button class="p" onclick="startQuiz()">시작</button></div></div>
   <div class="card"><h2>회차별 풀기 · 시험지 그대로 보기</h2><div class="grid">${rs.map(r=>`<div class="card rc" style="margin:0"><b>제${r}회</b><small>${D.rounds[r].ok?'정답표 있음':'정답표 없음'}</small>
@@ -82,12 +82,13 @@ function exp(){const a=document.createElement('a');a.href=URL.createObjectURL(ne
 function imp(el){const f=el.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{try{rec=Object.assign(rec,JSON.parse(r.result));save();home();alert('가져왔어요')}catch(e){alert('파일을 읽지 못했어요')}};r.readAsText(f)}
 let sess=null;
 function shuffle(a){a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
+function ordered(list){return shuffle(list).sort((a,b)=>ERAS.indexOf(era(a))-ERAS.indexOf(era(b)))}
 function startQuiz(){
   let pool=Q.filter(q=>q.a&&(!cfg.eras.size||cfg.eras.has(era(q)))&&(!cfg.rounds.size||cfg.rounds.has(q.r)));
   if(cfg.mode==='new')pool=pool.filter(q=>!rec[q.id]||!rec[q.id].t);
   if(cfg.mode==='wrong')pool=pool.filter(q=>rec[q.id]&&rec[q.id].w>0);
   if(!pool.length){alert('조건에 맞는 문항이 없어요');return}
-  begin(shuffle(pool).slice(0,cfg.n),'섞어 풀기')}
+  begin(ordered(shuffle(pool).slice(0,cfg.n)),'섞어 풀기 · 시대 순')}
 function startRound(r){begin(Q.filter(q=>q.r===r&&q.a),'제'+r+'회')}
 function begin(list,title){sess={list,i:0,title,res:[],picked:null};go('quiz');route()}
 function quizView(){
@@ -112,7 +113,7 @@ function nextQ(){sess.i++;sess.picked=null;quizView()}
 function result(){const s=sess,c=s.res.filter(x=>x.ok).length,bad=s.res.filter(x=>!x.ok);
   $('#app').innerHTML=`<div class="card"><h2>${s.title} 결과</h2><div class="stats"><div class="stat"><b>${c} / ${s.res.length}</b>정답</div><div class="stat"><b>${Math.round(c/s.res.length*100)}%</b>정답률</div></div>
    <div class="row"><button class="p" onclick="go('wrong')">오답노트 보기 (${bad.length})</button><button onclick="sess=null;go('')">처음으로</button>
-   ${bad.length?`<button onclick="begin(shuffle(sess.res.filter(x=>!x.ok).map(x=>byId[x.id])),'틀린 문제 다시')">틀린 문제 다시 풀기</button>`:''}</div></div>`}
+   ${bad.length?`<button onclick="begin(ordered(sess.res.filter(x=>!x.ok).map(x=>byId[x.id])),'틀린 문제 다시')">틀린 문제 다시 풀기</button>`:''}</div></div>`}
 let wf={era:'',hideDone:true,sort:'num'};
 function wrongView(){
   let ids=Object.keys(rec).filter(id=>rec[id].w>0&&byId[id]);
@@ -126,7 +127,7 @@ function wrongView(){
   <div class="row"><div class="chips"><span class="chip ${wf.era?'':'on'}" onclick="wf.era='';wrongView()">전체 ${all.filter(id=>!rec[id].done).length}</span>${ERAS.filter(e=>eraN[e]).map(e=>`<span class="chip ${wf.era===e?'on':''}" onclick="wf.era='${e}';wrongView()">${e} ${eraN[e]}</span>`).join('')}</div></div>
   <div class="row"><label><input type="checkbox" ${wf.hideDone?'checked':''} onchange="wf.hideDone=this.checked;wrongView()"> 정복한 문제 숨기기</label>
    <select onchange="wf.sort=this.value;wrongView()"><option value="num" ${wf.sort=='num'?'selected':''}>회차 순</option><option value="count" ${wf.sort=='count'?'selected':''}>많이 틀린 순</option></select>
-   <button class="p" ${ids.length?'':'disabled'} onclick='begin(shuffle(${JSON.stringify(ids)}.map(i=>byId[i])),"오답 다시 풀기")'>이 목록 다시 풀기 (${ids.length})</button></div></div>
+   <button class="p" ${ids.length?'':'disabled'} onclick='begin(ordered(${JSON.stringify(ids)}.map(i=>byId[i])),"오답 다시 풀기")'>이 목록 다시 풀기 (${ids.length})</button></div></div>
   ${ids.length?'':'<div class="card sub">표시할 오답이 없어요.</div>'}
   ${ids.map(id=>{const q=byId[id],r=rec[id];return `<div class="card"><div class="meta"><b>제${q.r}회 ${q.n}번</b><span class="tag">${era(q)}</span><span>틀린 횟수 ${r.w} · 푼 횟수 ${r.t}</span></div>
    <div class="wn"><div class="qimg"><img loading="lazy" src="q/${id}.jpg"></div><div>
